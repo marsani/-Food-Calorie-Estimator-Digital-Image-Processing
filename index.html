@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NutriScan PCD - Estimasi Kalori Makanan Tradisional</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Controls -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-logo">
+                    <i class="fa-solid fa-circle-nodes"></i>
+                </div>
+                <div>
+                    <h1>NutriScan PCD</h1>
+                    <span class="sub-brand">Estimasi Volume & Kalori 2D</span>
+                </div>
+            </div>
+
+            <!-- Panel: Import Sumber Citra -->
+            <section class="panel-section">
+                <h2 class="section-title"><i class="fa-solid fa-camera"></i> Input Citra</h2>
+                <div class="upload-area" id="drop-zone">
+                    <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                    <p>Seret & Lepas foto, atau klik untuk memilih</p>
+                    <input type="file" id="file-input" accept="image/*" style="display: none;">
+                    <button class="btn btn-secondary btn-sm" id="btn-upload-trigger">Pilih Berkas</button>
+                </div>
+                <div class="camera-actions">
+                    <button class="btn btn-primary btn-block" id="btn-start-camera">
+                        <i class="fa-solid fa-video"></i> Aktifkan Kamera Handphone/PC
+                    </button>
+                </div>
+                <div class="camera-preview-container" id="camera-container" style="display: none;">
+                    <video id="video" autoplay playsinline></video>
+                    <button class="btn btn-accent btn-sm" id="btn-capture">
+                        <i class="fa-solid fa-camera"></i> Ambil Foto
+                    </button>
+                </div>
+            </section>
+
+            <!-- Panel: Kalibrasi & Parameter PCD -->
+            <section class="panel-section">
+                <h2 class="section-title"><i class="fa-solid fa-sliders"></i> Konfigurasi PCD & Objek</h2>
+                
+                <!-- Pilihan Makanan -->
+                <div class="control-group">
+                    <label for="food-select">Jenis Makanan Tradisional</label>
+                    <select id="food-select" class="form-control">
+                        <option value="tahu" data-density="1.0" data-cal="80" data-carb="1.9" data-prot="8.0" data-fat="4.8" data-shape="cuboid" data-thick="2.0">Tahu Putih Goreng</option>
+                        <option value="tempe" data-density="0.9" data-cal="193" data-carb="9.4" data-prot="19.0" data-fat="11.0" data-shape="cuboid" data-thick="1.5" selected>Tempe Goreng</option>
+                        <option value="bakso" data-density="1.05" data-cal="160" data-carb="8.0" data-prot="12.0" data-fat="9.0" data-shape="spheroid" data-thick="3.0">Bakso Sapi</option>
+                        <option value="telur" data-density="1.0" data-cal="155" data-carb="1.1" data-prot="13.0" data-fat="11.0" data-shape="spheroid" data-thick="4.0">Telur Rebus</option>
+                        <option value="kentang" data-density="1.0" data-cal="87" data-carb="20.0" data-prot="2.0" data-fat="0.1" data-shape="spheroid" data-thick="5.0">Kentang Rebus</option>
+                        <option value="lontong" data-density="0.95" data-cal="144" data-carb="31.8" data-prot="2.4" data-fat="0.3" data-shape="cylinder" data-thick="4.0">Lontong</option>
+                    </select>
+                </div>
+
+                <!-- Geometri & Ketebalan -->
+                <div class="control-group">
+                    <div class="label-with-value">
+                        <label for="thickness-input">Ketebalan / Tinggi Objek (cm)</label>
+                        <span id="thickness-val" class="badge">1.5 cm</span>
+                    </div>
+                    <input type="range" id="thickness-input" min="0.5" max="8.0" step="0.1" value="1.5" class="slider">
+                </div>
+
+                <!-- Koin Referensi -->
+                <div class="control-group">
+                    <label for="coin-select">Koin Referensi (Diameter)</label>
+                    <select id="coin-select" class="form-control">
+                        <option value="2.7" selected>Koin Rp 500 (2.7 cm)</option>
+                        <option value="2.4">Koin Rp 1000 (2.4 cm)</option>
+                        <option value="2.5">Koin Rp 200 (2.5 cm)</option>
+                        <option value="custom">Koin Kustom (Tentukan di bawah)</option>
+                    </select>
+                </div>
+                
+                <div class="control-group" id="custom-coin-group" style="display: none;">
+                    <div class="label-with-value">
+                        <label for="custom-coin-input">Diameter Koin Kustom (cm)</label>
+                        <span id="custom-coin-val" class="badge">2.5 cm</span>
+                    </div>
+                    <input type="range" id="custom-coin-input" min="1.0" max="5.0" step="0.1" value="2.5" class="slider">
+                </div>
+
+                <!-- Parameter Segmentasi -->
+                <div class="divider"></div>
+                <h3 class="subsection-title">Penyetelan Segmentasi PCD</h3>
+
+                <div class="control-group">
+                    <div class="label-with-value">
+                        <label for="threshold-input">Sensitivitas Binarisasi (Threshold)</label>
+                        <span id="threshold-val" class="badge">128</span>
+                    </div>
+                    <input type="range" id="threshold-input" min="10" max="240" step="1" value="128" class="slider">
+                </div>
+
+                <div class="control-group-row">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="invert-mask">
+                        <span class="checkmark"></span>
+                        Balikkan Masker (Invert Mask)
+                    </label>
+                </div>
+            </section>
+        </aside>
+
+        <!-- Main Visualizer Area -->
+        <main class="main-content">
+            <header class="top-nav">
+                <div class="pcd-status">
+                    <span class="pulse-indicator active"></span>
+                    <span id="status-text">Menunggu citra diunggah...</span>
+                </div>
+                <div class="theme-info">
+                    <span class="badge badge-accent">Mode: PCD-Volume-2D</span>
+                </div>
+            </header>
+
+            <div class="visualizer-grid">
+                <!-- Card Canvas 1: Interaktif Overlay -->
+                <div class="canvas-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-crop-simple"></i> Kalibrasi & Bounding Box Interaktif</h3>
+                        <p class="card-subtitle">Geser & sesuaikan lingkaran koin (biru) dan kotak makanan (hijau)</p>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <canvas id="interactive-canvas"></canvas>
+                        <div class="canvas-placeholder" id="placeholder-1">
+                            <i class="fa-solid fa-image"></i>
+                            <p>Unggah atau ambil foto untuk memulai kalibrasi</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Canvas 2: Preview Segmentasi -->
+                <div class="canvas-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-circle-notch"></i> Hasil Segmentasi PCD (Binarisasi)</h3>
+                        <p class="card-subtitle">Visualisasi proses segmentasi piksel biner untuk kalkulasi area</p>
+                    </div>
+                    <div class="canvas-wrapper">
+                        <canvas id="segmented-canvas"></canvas>
+                        <div class="canvas-placeholder" id="placeholder-2">
+                            <i class="fa-solid fa-laptop-code"></i>
+                            <p>Proses citra biner akan ditampilkan di sini</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analisis Hasil Estimasi -->
+            <section class="results-dashboard">
+                <!-- Nutrisi Utama (Kiri) -->
+                <div class="nutrition-gauge-card">
+                    <div class="gauge-header">
+                        <h3>Estimasi Kandungan Energi</h3>
+                        <span>Berdasarkan volume terhitung</span>
+                    </div>
+                    <div class="gauge-body">
+                        <div class="circular-progress-container">
+                            <div class="circular-progress" id="calories-progress">
+                                <span class="calories-value" id="calories-display">0</span>
+                                <span class="calories-unit">Kcal</span>
+                            </div>
+                        </div>
+                        <div class="macro-bar-container">
+                            <div class="macro-row">
+                                <span class="macro-label">Karbohidrat</span>
+                                <div class="progress-track">
+                                    <div class="progress-fill carbs" id="carb-bar" style="width: 0%"></div>
+                                </div>
+                                <span class="macro-val" id="carb-display">0g</span>
+                            </div>
+                            <div class="macro-row">
+                                <span class="macro-label">Protein</span>
+                                <div class="progress-track">
+                                    <div class="progress-fill protein" id="protein-bar" style="width: 0%"></div>
+                                </div>
+                                <span class="macro-val" id="protein-display">0g</span>
+                            </div>
+                            <div class="macro-row">
+                                <span class="macro-label">Lemak</span>
+                                <div class="progress-track">
+                                    <div class="progress-fill fat" id="fat-bar" style="width: 0%"></div>
+                                </div>
+                                <span class="macro-val" id="fat-display">0g</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Info Fisik & Geometri (Kanan) -->
+                <div class="geometry-details-card">
+                    <h3>Detail Estimasi Geometri Makanan</h3>
+                    <div class="metrics-grid">
+                        <div class="metric-box">
+                            <i class="fa-solid fa-scale-unbalanced icon-blue"></i>
+                            <div class="metric-info">
+                                <span class="metric-label">Rasio Piksel/cm</span>
+                                <span class="metric-value" id="px-ratio-display">0.0 px/cm</span>
+                            </div>
+                        </div>
+                        <div class="metric-box">
+                            <i class="fa-solid fa-up-right-and-down-left-from-center icon-green"></i>
+                            <div class="metric-info">
+                                <span class="metric-label">Dimensi Makanan</span>
+                                <span class="metric-value" id="dimensions-display">0.0 x 0.0 cm</span>
+                            </div>
+                        </div>
+                        <div class="metric-box">
+                            <i class="fa-solid fa-cube icon-purple"></i>
+                            <div class="metric-info">
+                                <span class="metric-label">Volume Estimasi</span>
+                                <span class="metric-value" id="volume-display">0.0 cm³</span>
+                            </div>
+                        </div>
+                        <div class="metric-box">
+                            <i class="fa-solid fa-weight-hanging icon-orange"></i>
+                            <div class="metric-info">
+                                <span class="metric-label">Berat Estimasi</span>
+                                <span class="metric-value" id="weight-display">0.0 gram</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn btn-accent btn-block" id="btn-save-log" disabled>
+                            <i class="fa-solid fa-bookmark"></i> Simpan Catatan Harian Nutrisi
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Riwayat & Log Nutrisi -->
+            <section class="history-section">
+                <div class="history-header">
+                    <h2><i class="fa-solid fa-clock-rotate-left"></i> Catatan Riwayat Estimasi Hari Ini</h2>
+                    <button class="btn btn-secondary btn-sm" id="btn-clear-history"><i class="fa-solid fa-trash-can"></i> Hapus Semua</button>
+                </div>
+                <div class="history-table-container">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Waktu</th>
+                                <th>Makanan</th>
+                                <th>Metode Bentuk</th>
+                                <th>Dimensi (cm)</th>
+                                <th>Volume (cm³)</th>
+                                <th>Berat (g)</th>
+                                <th>Kalori</th>
+                                <th>Nutrisi (K / P / L)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-body">
+                            <tr>
+                                <td colspan="8" class="text-center">Belum ada riwayat tercatat hari ini. Silakan lakukan pemindaian di atas.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+    
+    <script src="app.js"></script>
+</body>
+</html>
